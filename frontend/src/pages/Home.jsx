@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChefHat, Utensils, Clock, MapPin, Sparkles, ArrowRight } from 'lucide-react';
-
+import { TypewriterEffectSmooth } from '@/components/ui/typewriter-effect';
 export default function Home() {
   const navigate = useNavigate();
   
@@ -70,7 +70,60 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col lg:flex-row overflow-hidden bg-background">
+    <div className="flex flex-col bg-background">
+      {/* Hero Video Section */}
+      <div className="relative w-full h-screen overflow-hidden">
+        <video 
+          src="/hero-video.mp4" 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/50 z-10" />
+        
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pb-16 px-4">
+           <h1 className="text-7xl md:text-9xl font-black text-white tracking-tighter drop-shadow-2xl mb-6 lowercase italic">zerowait</h1>
+           <TypewriterEffectSmooth 
+             words={[
+               { text: "india's", className: "text-white drop-shadow-lg" },
+               { text: "fastest", className: "text-white drop-shadow-lg" },
+               { text: "way", className: "text-white drop-shadow-lg" },
+               { text: "to", className: "text-white drop-shadow-lg" },
+               { text: "answer", className: "text-white drop-shadow-lg" },
+               { text: "hunger.", className: "text-orange-500 drop-shadow-lg" }
+             ]}
+             className="my-0 mb-12"
+             cursorClassName="bg-orange-500"
+           />
+           <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-0 md:space-x-8 w-full md:w-auto mt-2">
+             <button 
+               onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
+               className="w-full md:w-48 h-12 rounded-full bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition-all shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:shadow-[0_0_30px_rgba(249,115,22,0.6)] hover:-translate-y-1"
+             >
+               Login
+             </button>
+             <button 
+               onClick={() => navigate('/map')}
+               className="w-full md:w-48 h-12 rounded-full bg-transparent border-2 border-white/60 text-white font-bold text-sm hover:bg-white/10 hover:border-white transition-all hover:-translate-y-1"
+             >
+               Find Restaurants
+             </button>
+           </div>
+        </div>
+
+        {/* Scroll down indicator */}
+        <div 
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 animate-bounce flex flex-col items-center text-white/90 cursor-pointer hover:text-white transition-colors" 
+          onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
+        >
+          <span className="text-sm font-medium mb-1 tracking-wide">Scroll down</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </div>
+
+      <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden bg-background">
       
       {/* LEFT SIDE: Animated Visuals */}
       <div className="flex-1 relative hidden lg:flex flex-col items-center justify-center p-12 overflow-hidden bg-white">
@@ -180,7 +233,7 @@ export default function Home() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full px-5 py-4 rounded-2xl bg-white/50 border border-gray-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" 
-                      placeholder="John Doe" 
+                      placeholder="Enter your name" 
                     />
                   </div>
                 )}
@@ -236,7 +289,7 @@ export default function Home() {
           )}
         </div>
       </div>
-      
+      </div>
     </div>
   );
 }

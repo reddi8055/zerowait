@@ -13,6 +13,11 @@ const BookingSchema = new mongoose.Schema(
     restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
     tableIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Table', required: true }],
     customerName: { type: String, required: true },
+    customerEmail: { type: String },
+    customerPhone: { type: String },
+    city: { type: String },
+    bookingTime: { type: String },
+    waitingTimeStatus: { type: String },
     numberOfPeople: { type: Number, required: true },
     arrivalTime: { type: Date, required: false },
     status: {

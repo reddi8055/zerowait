@@ -93,7 +93,7 @@ export default function Login() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow" 
-                placeholder="John Doe" 
+                placeholder="Enter your name" 
               />
             </div>
           )}

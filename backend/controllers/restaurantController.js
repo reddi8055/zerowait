@@ -19,16 +19,18 @@ export const createRestaurant = async (req, res) => {
       role: 'restaurant'
     });
     const restaurant = await Restaurant.create({
-      ownerId: owner._id,
-      name: data.name,
-      cuisineType: data.cuisineType,
-      mapX: data.mapX,
-      mapY: data.mapY,
-      address: data.address,
-      capacity: data.capacity,
-      isOpen: true,
+      ownerId:      owner._id,
+      name:         data.name,
+      cuisineType:  data.cuisineType,
+      mapX:         data.mapX,
+      mapY:         data.mapY,
+      address:      data.address,
+      capacity:     data.capacity,
+      ownerEmail:   data.ownerEmail   || '',    // ← used for email notifications
+      ownerPhone:   data.ownerPhone   || '',    // ← used for WhatsApp notifications
+      isOpen:       true,
       currentWaitTime: 0,
-      rating: 5.0
+      rating:       5.0
     });
     const numTables = parseInt(data.numTables) || 0;
     if (numTables > 0) {
@@ -80,7 +82,11 @@ export const getMyRestaurant = async (req, res) => {
 
 export const updateMyRestaurant = async (req, res) => {
   try {
-    const allowed = ['name', 'cuisineType', 'address', 'phone', 'openingHours', 'description', 'imageUrl', 'isOpen', 'currentWaitTime'];
+    const allowed = [
+      'name', 'cuisineType', 'address', 'phone', 'openingHours',
+      'description', 'imageUrl', 'isOpen', 'currentWaitTime',
+      'ownerEmail', 'ownerPhone',   // ← B2B notification channels
+    ];
     const updates = {};
     allowed.forEach(key => { if (req.body[key] !== undefined) updates[key] = req.body[key]; });
     const restaurant = await Restaurant.findOneAndUpdate(
