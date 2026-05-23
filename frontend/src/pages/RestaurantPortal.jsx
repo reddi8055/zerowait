@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   ChefHat, Clock, PlusCircle, Utensils, Info, Settings,
   Camera, Phone, MapPin, Save, Lock, Eye, EyeOff, CheckCircle,
-  ToggleLeft, ToggleRight, Trash2, Star
+  ToggleLeft, ToggleRight, Trash2, Star, Grid
 } from 'lucide-react';
 import { MenuItemCard } from '@/components/ui/menu-item-card';
 import { cleanImageUrl } from '@/lib/utils';
@@ -23,6 +23,7 @@ export default function RestaurantDashboard() {
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -60,10 +61,11 @@ export default function RestaurantDashboard() {
 
   const fetchAll = async () => {
     try {
-      const [restRes, menuRes, bookingsRes] = await Promise.all([
+      const [restRes, menuRes, bookingsRes, tablesRes] = await Promise.all([
         fetch(`${API}/api/restaurants/mine`, { credentials: 'include' }),
         fetch(`${API}/api/menu`, { credentials: 'include' }),
-        fetch(`${API}/api/bookings/restaurant`, { credentials: 'include' })
+        fetch(`${API}/api/bookings/restaurant`, { credentials: 'include' }),
+        fetch(`${API}/api/restaurants/mine/tables`, { credentials: 'include' })
       ]);
       if (restRes.ok) {
         const r = await restRes.json();
@@ -85,6 +87,10 @@ export default function RestaurantDashboard() {
       if (bookingsRes.ok) {
         const b = await bookingsRes.json();
         setBookings(b);
+      }
+      if (tablesRes.ok) {
+        const t = await tablesRes.json();
+        setTables(t);
       }
     } catch (err) {
       console.error(err);
@@ -131,6 +137,49 @@ export default function RestaurantDashboard() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ currentWaitTime: newTime })
+    });
+    if (res.ok) setRestaurant(await res.json());
+  };
+
+  const updateCapacity = async (delta) => {
+    const newCapacity = Math.max(0, (restaurant.capacity || 0) + delta);
+    const res = await fetch(`${API}/api/restaurants/mine`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ capacity: newCapacity })
+    });
+    if (res.ok) setRestaurant(await res.json());
+  };
+
+  const updateIndividualTable = async (tableId, delta) => {
+    const table = tables.find(t => t._id === tableId);
+    if (!table) return;
+    const newSeats = Math.max(1, table.seats + delta);
+    
+    // Optimistic update
+    setTables(prev => prev.map(t => t._id === tableId ? { ...t, seats: newSeats } : t));
+    
+    try {
+      await fetch(`${API}/api/restaurants/mine/tables/${tableId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ seats: newSeats })
+      });
+    } catch (err) {
+      console.error(err);
+      fetchAll(); // Revert on failure
+    }
+  };
+
+  const updateSeatsPerTable = async (delta) => {
+    const newSeats = Math.max(1, (restaurant.seatsPerTable || 4) + delta);
+    const res = await fetch(`${API}/api/restaurants/mine`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ seatsPerTable: newSeats })
     });
     if (res.ok) setRestaurant(await res.json());
   };
@@ -245,6 +294,7 @@ export default function RestaurantDashboard() {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: ChefHat },
+    { id: 'tables', label: 'Tables', icon: Grid },
     { id: 'menu', label: 'Menu', icon: Utensils },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -312,7 +362,7 @@ export default function RestaurantDashboard() {
       {/* ── DASHBOARD TAB ── */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Wait Time */}
             <div className="glass-card p-6 rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
@@ -332,6 +382,52 @@ export default function RestaurantDashboard() {
                 <button
                   onClick={() => updateWaitTime(5)}
                   className="w-12 h-12 rounded-2xl bg-orange-50 hover:bg-orange-100 border border-orange-200 flex items-center justify-center font-bold text-xl text-primary transition-all hover:scale-105"
+                >+</button>
+              </div>
+            </div>
+
+            {/* Total Tables */}
+            <div className="glass-card p-6 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-xl"><Utensils className="text-blue-600" size={22} /></div>
+                <h2 className="text-xl font-bold">Total Tables</h2>
+              </div>
+              <p className="text-gray-500 text-sm mb-6">Manage how many tables are available for booking.</p>
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => updateCapacity(-1)}
+                  className="w-12 h-12 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-xl transition-all hover:scale-105"
+                >−</button>
+                <div className="text-center w-16">
+                  <div className="text-5xl font-black text-blue-600">{restaurant?.capacity ?? 0}</div>
+                  <div className="text-sm font-medium text-gray-400 mt-1">tables</div>
+                </div>
+                <button
+                  onClick={() => updateCapacity(1)}
+                  className="w-12 h-12 rounded-2xl bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center justify-center font-bold text-xl text-blue-600 transition-all hover:scale-105"
+                >+</button>
+              </div>
+            </div>
+
+            {/* Seats per Table */}
+            <div className="glass-card p-6 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-emerald-100 rounded-xl"><Utensils className="text-emerald-600" size={22} /></div>
+                <h2 className="text-xl font-bold">Seats per Table</h2>
+              </div>
+              <p className="text-gray-500 text-sm mb-6">Manage how many chairs are at each table.</p>
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => updateSeatsPerTable(-1)}
+                  className="w-12 h-12 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-xl transition-all hover:scale-105"
+                >−</button>
+                <div className="text-center w-16">
+                  <div className="text-5xl font-black text-emerald-600">{restaurant?.seatsPerTable ?? 4}</div>
+                  <div className="text-sm font-medium text-gray-400 mt-1">chairs</div>
+                </div>
+                <button
+                  onClick={() => updateSeatsPerTable(1)}
+                  className="w-12 h-12 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center font-bold text-xl text-emerald-600 transition-all hover:scale-105"
                 >+</button>
               </div>
             </div>
@@ -407,6 +503,47 @@ export default function RestaurantDashboard() {
                         )}
                         <button onClick={() => updateBookingStatus(booking._id, 'cancelled')} className="text-xs font-bold px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">Cancel</button>
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TABLES TAB ── */}
+      {activeTab === 'tables' && (
+        <div className="space-y-6">
+          <div className="glass-card p-6 rounded-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-emerald-100 rounded-xl"><Grid className="text-emerald-600" size={22} /></div>
+              <h2 className="text-xl font-bold">Manage Individual Tables</h2>
+            </div>
+            <p className="text-gray-500 text-sm mb-6">Customize the exact number of chairs for each specific table in your restaurant.</p>
+
+            {tables.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <Grid size={40} className="mx-auto mb-3 opacity-30" />
+                <p className="font-semibold">No tables found.</p>
+                <p className="text-sm mt-1">Go to Dashboard and increase Total Tables first.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {tables.map(table => (
+                  <div key={table._id} className="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center">
+                    <div className="font-black text-gray-800 mb-1">{table.tableName}</div>
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{table.seats} Chairs</div>
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-1 border border-gray-100">
+                      <button 
+                        onClick={() => updateIndividualTable(table._id, -1)}
+                        className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 hover:text-red-500 transition-colors shadow-sm"
+                      >−</button>
+                      <span className="font-black w-4 text-center">{table.seats}</span>
+                      <button 
+                        onClick={() => updateIndividualTable(table._id, 1)}
+                        className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-600 hover:bg-gray-100 hover:text-emerald-500 transition-colors shadow-sm"
+                      >+</button>
                     </div>
                   </div>
                 ))}

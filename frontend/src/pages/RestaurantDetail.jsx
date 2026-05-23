@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Clock, MapPin, CheckCircle, Store, Plus, Minus,
   ShoppingCart, Mail, Phone, User, Calendar, Hash,
-  TimerIcon
+  TimerIcon, Utensils
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { MenuItemCard } from '@/components/ui/menu-item-card';
@@ -65,7 +65,7 @@ export default function RestaurantDetails() {
   const [error, setError] = useState('');
 
   // Booking choices
-  const [selectedTables, setSelectedTables] = useState([]);
+  const [selectedSeats, setSelectedSeats] = useState([]);
   const [cart, setCart] = useState({});
 
   // Contact info
@@ -104,13 +104,23 @@ export default function RestaurantDetails() {
     return { ...p, [id]: p[id] - 1 };
   });
 
-  const totalSelectedSeats  = selectedTables.reduce((sum, id) => {
-    const t = data?.tables?.find(t => t._id === id);
-    return sum + (t ? t.seats : 0);
-  }, 0);
-  const isCapacityExceeded  = numberOfPeople > totalSelectedSeats;
-  const toggleTableSelection = (tableId) =>
-    setSelectedTables(p => p.includes(tableId) ? p.filter(id => id !== tableId) : [...p, tableId]);
+  const totalSelectedSeats = selectedSeats.length;
+  const isCapacityExceeded = numberOfPeople > totalSelectedSeats;
+  
+  const toggleSeatSelection = (tableId, seatIndex) => {
+    const seatId = `${tableId}-${seatIndex}`;
+    setSelectedSeats(prev => {
+      if (prev.includes(seatId)) {
+        return prev.filter(id => id !== seatId);
+      } else {
+        if (prev.length >= numberOfPeople) {
+          alert(`You can only select ${numberOfPeople} seats. Unselect a seat first.`);
+          return prev;
+        }
+        return [...prev, seatId];
+      }
+    });
+  };
 
   const validate = () => {
     const errs = {};
@@ -124,8 +134,8 @@ export default function RestaurantDetails() {
   };
 
   const handleBookTable = async () => {
-    if (selectedTables.length === 0) {
-      alert('Please select at least one table.');
+    if (selectedSeats.length === 0) {
+      alert('Please select at least one seat.');
       return;
     }
     if (isCapacityExceeded) {
@@ -155,7 +165,7 @@ export default function RestaurantDetails() {
         credentials: 'include',
         body: JSON.stringify({
           restaurantId,
-          tableIds:      selectedTables,
+          tableIds:      [...new Set(selectedSeats.map(id => id.split('-')[0]))],
           customerName:  customerName.trim(),
           customerEmail: customerEmail.trim(),
           customerPhone: customerPhone.trim(),
@@ -198,7 +208,7 @@ export default function RestaurantDetails() {
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col pt-[104px]">
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 pb-32">
 
         {/* Restaurant Header */}
@@ -293,7 +303,7 @@ export default function RestaurantDetails() {
             </div>
 
             <button
-              onClick={() => { setBookingResult(null); setCart({}); setSelectedTables([]); }}
+              onClick={() => { setBookingResult(null); setCart({}); setSelectedSeats([]); }}
               className="mt-4 px-8 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all hover:scale-105 shadow-md"
             >
               Make Another Booking
@@ -311,35 +321,94 @@ export default function RestaurantDetails() {
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">1</div>
                   <h2 className="text-2xl font-bold">Select Your Table</h2>
                 </div>
-                {tables.length === 0 ? (
-                  <p className="text-gray-500 italic bg-gray-50 p-4 rounded-xl">No tables available.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {tables.map(table => (
+
+                {/* ── BMS Style Number of People Selector ── */}
+                <div className="mb-8 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-sm font-bold text-gray-800 mb-3 text-center">How many people?</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
                       <button
-                        key={table._id}
-                        onClick={() => toggleTableSelection(table._id)}
-                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2
-                          ${selectedTables.includes(table._id)
-                            ? 'border-primary bg-orange-50 text-primary scale-105 shadow-md'
-                            : 'border-gray-100 hover:border-gray-300 hover:shadow-sm'}`}
+                        key={num}
+                        onClick={() => {
+                          setNumberOfPeople(num);
+                          if (selectedSeats.length > num) {
+                            setSelectedSeats(prev => prev.slice(0, num));
+                          }
+                        }}
+                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all duration-200 border-2 flex items-center justify-center
+                          ${numberOfPeople === num 
+                            ? 'bg-primary border-primary text-white scale-110 shadow-md shadow-orange-200' 
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary'}`}
                       >
-                        <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center mb-1
-                          ${selectedTables.includes(table._id) ? 'border-primary bg-primary text-white' : 'border-gray-200 text-gray-400'}`}>
-                          <Store size={18} />
-                        </div>
-                        <span className="font-bold text-sm">{table.tableName}</span>
-                        <span className="text-xs text-gray-500">{table.seats} Seats</span>
+                        {num}
                       </button>
                     ))}
+                  </div>
+                  {isCapacityExceeded && selectedSeats.length > 0 && (
+                    <p className="text-center text-xs font-bold text-red-500 mt-3 bg-red-50 p-2 rounded-lg border border-red-100">
+                      You selected {numberOfPeople} people, but only picked {totalSelectedSeats} seats. Please select more seats!
+                    </p>
+                  )}
+                </div>
+
+                {tables.length === 0 ? (
+                  <p className="text-gray-500 italic bg-gray-50 p-4 rounded-xl text-center">No tables available.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {tables.map(table => {
+                      const isTableSelected = selectedSeats.some(id => id.startsWith(table._id));
+                      return (
+                        <div
+                          key={table._id}
+                          className={`p-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2
+                            ${isTableSelected
+                              ? 'border-emerald-500 bg-emerald-50/20 shadow-md shadow-emerald-100'
+                              : 'border-gray-100 bg-white hover:border-emerald-300 hover:shadow-sm'}`}
+                        >
+                          {/* Table Top */}
+                          <div className={`w-full py-2 rounded-xl border-[3px] flex items-center justify-center transition-all
+                            ${isTableSelected ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
+                            <span className="font-black text-xs uppercase tracking-widest flex items-center gap-1">
+                              <Utensils size={14} /> {table.tableName}
+                            </span>
+                          </div>
+                          
+                          {/* Chairs Row (BMS Style) */}
+                          <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+                            {Array.from({ length: table.seats }).map((_, i) => {
+                              const seatId = `${table._id}-${i}`;
+                              const isSelected = selectedSeats.includes(seatId);
+                              
+                              return (
+                                <button 
+                                  key={i} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSeatSelection(table._id, i);
+                                  }}
+                                  className={`w-8 h-8 rounded border-[2px] flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
+                                    isSelected 
+                                      ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm scale-110' 
+                                      : 'border-emerald-500 bg-white text-gray-500 hover:bg-emerald-50 hover:scale-105'
+                                  }`} 
+                                  title={`Seat ${i+1}`}
+                                >
+                                   {String(i + 1).padStart(2, '0')}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
               {/* Step 2: Food Selection */}
-              <div className={`glass-card p-6 rounded-3xl transition-opacity duration-500 ${selectedTables.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+              <div className={`glass-card p-6 rounded-3xl transition-opacity duration-500 ${selectedSeats.length === 0 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                 <div className="flex items-center gap-2 mb-6">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${selectedTables.length > 0 ? 'bg-primary text-white' : 'bg-gray-300 text-white'}`}>2</div>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${selectedSeats.length > 0 ? 'bg-primary text-white' : 'bg-gray-300 text-white'}`}>2</div>
                   <h2 className="text-2xl font-bold">Pre-Order Food</h2>
                 </div>
                 {(!menuItems || menuItems.length === 0) ? (
@@ -388,14 +457,14 @@ export default function RestaurantDetails() {
                   <ShoppingCart className="text-primary" /> Your Order
                 </h3>
 
-                {!selectedTables.length ? (
-                  <p className="text-gray-400 text-sm italic text-center py-8">Select at least one table to begin your order.</p>
+                {!selectedSeats.length ? (
+                  <p className="text-gray-400 text-sm italic text-center py-8">Select at least one seat to begin your order.</p>
                 ) : (
                   <div className="space-y-4">
                     <div className="flex justify-between items-center bg-green-50 p-3 rounded-xl border border-green-100">
                       <span className="text-sm font-medium text-green-800">Selected Tables:</span>
                       <span className="font-bold text-green-700 max-w-[60%] text-right">
-                        {selectedTables.map(id => tables.find(t => t._id === id)?.tableName).join(', ')}
+                        {[...new Set(selectedSeats.map(id => id.split('-')[0]))].map(id => tables.find(t => t._id === id)?.tableName).join(', ')}
                       </span>
                     </div>
 
@@ -485,28 +554,15 @@ export default function RestaurantDetails() {
                         <p className="text-xs text-gray-400 mt-1">Peak hours (7–9 PM) may have a wait time.</p>
                       </div>
 
-                      <InputField
-                        id="numberOfPeople"
-                        label="Number of People"
-                        type="number"
-                        value={numberOfPeople}
-                        onChange={e => setNumberOfPeople(parseInt(e.target.value) || 1)}
-                        placeholder="1"
-                        error={fieldErrors.numberOfPeople || (isCapacityExceeded && selectedTables.length > 0 ? `${numberOfPeople} people need ${numberOfPeople} seats — only ${totalSelectedSeats} selected.` : '')}
-                        min="1"
-                      />
+
                     </div>
 
-                    {isCapacityExceeded && selectedTables.length > 0 && (
-                      <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold border border-red-100 mt-2">
-                        Not enough seats! Select more tables to accommodate {numberOfPeople} people.
-                      </div>
-                    )}
+
 
                     <button
                       id="confirmBookingBtn"
                       onClick={handleBookTable}
-                      disabled={selectedTables.length === 0 || bookingLoading || isCapacityExceeded}
+                      disabled={selectedSeats.length === 0 || bookingLoading || isCapacityExceeded}
                       className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:scale-100 hover:scale-105 shadow-md mt-6"
                     >
                       {bookingLoading ? (

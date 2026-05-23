@@ -7,11 +7,11 @@ import RestaurantPortal from './pages/RestaurantPortal';
 import MapPage from './pages/MapPage';
 import RestaurantDetail from './pages/RestaurantDetail';
 import MyOrders from './pages/MyOrders';
-
+import FloatingBackground from './components/FloatingBackground';
 // Pages that need the padded content wrapper (not Map which is full screen)
 function PageLayout({ children }) {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-6 pb-8 pt-[104px]">
       {children}
     </div>
   );
@@ -22,7 +22,8 @@ function App() {
     <Router>
       <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-background)' }}>
         <Navbar />
-        <div className="flex-1">
+        <FloatingBackground />
+        <div className="flex-1 relative z-10">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Home />} />

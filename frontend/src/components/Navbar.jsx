@@ -20,10 +20,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
-  const [role, setRole] = useState(null); // Default to null (unauthenticated) so it shows Login first
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
-    // Fetch the user's role from the backend securely on every page load
     fetch('http://localhost:5000/api/auth/me', { credentials: "include" })
       .then(res => res.json())
       .then(data => {
@@ -34,7 +33,7 @@ export default function Navbar() {
         }
       })
       .catch(() => setRole(null));
-  }, [pathname]); // Re-run when pathname changes to ensure it's always up to date
+  }, [pathname]);
 
   const handleLogout = async () => {
     await fetch('http://localhost:5000/api/auth/logout', { credentials: "include",  method: 'POST' });
@@ -43,55 +42,67 @@ export default function Navbar() {
     window.location.reload();
   };
 
-  if (pathname === '/') return null;
+  if (pathname === '/' || pathname === '/login') return null;
 
   return (
-    <nav className="sticky top-0 z-50 glass-card px-6 py-4 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-        <LogoIcon />
-        <span className="text-xl font-bold text-text-charcoal tracking-tight">Zero Wait</span>
-      </Link>
-      
-      <div className="flex items-center gap-6 font-medium text-sm">
-        <div className="flex items-center gap-4 animate-in fade-in zoom-in duration-500">
-          {role === 'admin' && (
-            <Link to="/admin" className={`flex items-center gap-1 transition-all hover:scale-105 ${pathname === '/admin' ? 'text-primary' : 'hover:text-primary'}`}>
-              <LayoutDashboard size={18} /> Dashboard
+    <div className="fixed top-0 inset-x-0 z-50 p-4 pointer-events-none">
+      <nav className="max-w-7xl mx-auto backdrop-blur-2xl bg-white/70 border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-6 py-3.5 rounded-2xl flex items-center justify-between pointer-events-auto transition-all duration-300">
+        
+        {/* LOGO */}
+        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity group">
+          <div className="bg-slate-900 rounded-xl p-1.5 shadow-sm group-hover:scale-105 transition-transform duration-300">
+            <LogoIcon />
+          </div>
+          <span className="text-xl font-black text-slate-900 tracking-tight group-hover:text-primary transition-colors duration-300">
+            ZeroWait<span className="text-primary">.</span>
+          </span>
+        </Link>
+        
+        {/* NAV LINKS */}
+        <div className="flex items-center gap-2 font-bold text-sm text-slate-600">
+          <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-xl border border-slate-200/50">
+            {role === 'admin' && (
+              <Link to="/admin" className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-300 ${pathname === '/admin' ? 'bg-white shadow-sm text-primary' : 'hover:bg-white/60 hover:text-slate-900'}`}>
+                <LayoutDashboard size={16} /> <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+            )}
+            {role === 'restaurant' && (
+              <Link to="/restaurant-portal" className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-300 ${pathname === '/restaurant-portal' ? 'bg-white shadow-sm text-primary' : 'hover:bg-white/60 hover:text-slate-900'}`}>
+                <Utensils size={16} /> <span className="hidden sm:inline">Portal</span>
+              </Link>
+            )}
+            
+            <Link to="/map" className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-300 ${pathname === '/map' ? 'bg-white shadow-sm text-primary' : 'hover:bg-white/60 hover:text-slate-900'}`}>
+              <MapIcon size={16} /> <span className="hidden sm:inline">Explore</span>
             </Link>
-          )}
-          {role === 'restaurant' && (
-            <Link to="/restaurant-portal" className={`flex items-center gap-1 transition-all hover:scale-105 ${pathname === '/restaurant-portal' ? 'text-primary' : 'hover:text-primary'}`}>
-              <Utensils size={18} /> My Restaurant
-            </Link>
-          )}
-          
-          {/* Everyone can see the map */}
-          <Link to="/map" className={`flex items-center gap-1 transition-all hover:scale-105 ${pathname === '/map' ? 'text-primary' : 'hover:text-primary'}`}>
-            <MapIcon size={18} /> Find Food
-          </Link>
 
-          {role === 'user' && (
-            <Link to="/my-orders" className={`flex items-center gap-1 transition-all hover:scale-105 ${pathname === '/my-orders' ? 'text-primary' : 'hover:text-primary'}`}>
-              <Utensils size={18} /> My Orders
-            </Link>
-          )}
+            {role === 'user' && (
+              <Link to="/my-orders" className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all duration-300 ${pathname === '/my-orders' ? 'bg-white shadow-sm text-primary' : 'hover:bg-white/60 hover:text-slate-900'}`}>
+                <Utensils size={16} /> <span className="hidden sm:inline">Orders</span>
+              </Link>
+            )}
+          </div>
 
-          {role ? (
-            <button onClick={handleLogout} className="flex items-center gap-1 text-danger hover:bg-red-100 transition-all ml-2 border border-red-100 bg-red-50 px-4 py-2 rounded-full font-medium hover:scale-105">
-              <LogOut size={16} /> Logout
-            </button>
-          ) : (
-            <Link to="/login" className="relative group overflow-hidden bg-gradient-to-r from-orange-400 to-primary text-white px-8 py-2.5 rounded-full font-black shadow-[0_0_15px_rgba(249,115,22,0.5)] hover:shadow-[0_0_25px_rgba(249,115,22,0.8)] transition-all duration-300 hover:scale-110 hover:-translate-y-1 ml-4 flex items-center justify-center animate-bounce-slow border-2 border-white/20 hover:border-white/50">
-              <span className="relative z-10 flex items-center gap-2 drop-shadow-md">
-                Login <Sparkles size={18} className="animate-pulse text-yellow-200" />
-              </span>
-              
-              {/* Shine effect that sweeps across on hover */}
-              <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 group-hover:animate-[shine_1s_ease-in-out]"></div>
-            </Link>
-          )}
+          {/* ACTIONS */}
+          <div className="flex items-center pl-4 border-l border-slate-200/60 ml-2">
+            {role ? (
+              <button 
+                onClick={handleLogout} 
+                className="flex items-center justify-center gap-2 text-rose-500 hover:text-white bg-rose-50 hover:bg-rose-500 transition-all duration-300 px-5 py-2.5 rounded-xl font-bold shadow-sm hover:shadow-rose-200 hover:scale-105"
+              >
+                <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
+              </button>
+            ) : (
+              <Link to="/login" className="relative group overflow-hidden bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center border border-slate-800">
+                <span className="relative z-10 flex items-center gap-2">
+                  Login <Sparkles size={16} className="text-yellow-400" />
+                </span>
+                <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 group-hover:animate-[shine_1s_ease-in-out]"></div>
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }

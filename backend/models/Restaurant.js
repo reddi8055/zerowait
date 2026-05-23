@@ -21,6 +21,7 @@ const RestaurantSchema = new mongoose.Schema(
     imageUrl:       { type: String },
     description:    { type: String },
     capacity:       { type: Number, default: 0 },
+    seatsPerTable:  { type: Number, default: 4 },
     totalReviews:   { type: Number, default: 0 },
     reviews: [
       {

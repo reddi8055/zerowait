@@ -84,19 +84,53 @@ export const updateMyRestaurant = async (req, res) => {
   try {
     const allowed = [
       'name', 'cuisineType', 'address', 'phone', 'openingHours',
-      'description', 'imageUrl', 'isOpen', 'currentWaitTime',
-      'ownerEmail', 'ownerPhone',   // ← B2B notification channels
+      'description', 'imageUrl', 'isOpen', 'currentWaitTime', 'capacity',
+      'ownerEmail', 'ownerPhone', 'seatsPerTable'   // ← B2B notification channels
     ];
     const updates = {};
     allowed.forEach(key => { if (req.body[key] !== undefined) updates[key] = req.body[key]; });
+    
     const restaurant = await Restaurant.findOneAndUpdate(
       { ownerId: req.user.id },
       { $set: updates },
       { new: true }
     );
     if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' });
+
+    // Sync physical Table documents if capacity was updated
+    if (req.body.capacity !== undefined) {
+      const newCapacity = parseInt(req.body.capacity) || 0;
+      const currentTables = await Table.find({ restaurantId: restaurant._id }).sort({ createdAt: 1 });
+      const currentCount = currentTables.length;
+      
+      if (newCapacity > currentCount) {
+        const tablesToInsert = [];
+        const seatsCount = req.body.seatsPerTable !== undefined ? parseInt(req.body.seatsPerTable) : (restaurant.seatsPerTable || 4);
+        
+        // Add new tables sequentially
+        for (let i = currentCount + 1; i <= newCapacity; i++) {
+          tablesToInsert.push({ restaurantId: restaurant._id, tableName: `Table ${i}`, seats: seatsCount, isAvailable: true });
+        }
+        if (tablesToInsert.length > 0) {
+          await Table.insertMany(tablesToInsert);
+        }
+      } else if (newCapacity < currentCount) {
+        // Remove the most recently added tables
+        const tablesToRemove = currentTables.slice(newCapacity).map(t => t._id);
+        if (tablesToRemove.length > 0) {
+          await Table.deleteMany({ _id: { $in: tablesToRemove } });
+        }
+      }
+    }
+
+    if (req.body.seatsPerTable !== undefined) {
+      const newSeats = parseInt(req.body.seatsPerTable) || 4;
+      await Table.updateMany({ restaurantId: restaurant._id }, { $set: { seats: newSeats } });
+    }
+
     res.json(restaurant);
   } catch (error) {
+    console.error('Error updating restaurant:', error);
     res.status(500).json({ error: 'Failed to update restaurant' });
   }
 };
@@ -166,5 +200,37 @@ export const addReview = async (req, res) => {
   } catch (error) {
     console.error('Error adding review:', error);
     res.status(500).json({ error: 'Failed to add review' });
+  }
+};
+
+export const getMyTables = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOne({ ownerId: req.user.id });
+    if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' });
+    const tables = await Table.find({ restaurantId: restaurant._id }).sort({ createdAt: 1 });
+    res.json(tables);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tables' });
+  }
+};
+
+export const updateMyTable = async (req, res) => {
+  try {
+    const tableId = req.params.tableId;
+    const { seats, tableName } = req.body;
+    const restaurant = await Restaurant.findOne({ ownerId: req.user.id });
+    if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' });
+    
+    // Ensure table belongs to this restaurant
+    const table = await Table.findOne({ _id: tableId, restaurantId: restaurant._id });
+    if (!table) return res.status(404).json({ error: 'Table not found' });
+    
+    if (seats !== undefined) table.seats = Math.max(1, parseInt(seats));
+    if (tableName !== undefined) table.tableName = tableName;
+    
+    await table.save();
+    res.json(table);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update table' });
   }
 };

@@ -6,7 +6,9 @@ import {
   getMyRestaurant,
   updateMyRestaurant,
   changePassword,
-  addReview
+  addReview,
+  getMyTables,
+  updateMyTable
 } from '../controllers/restaurantController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -21,5 +23,9 @@ router.get('/:id', getRestaurantDetails);
 
 // New endpoint for users to submit a review
 router.post('/:id/reviews', protect, authorize('user'), addReview);
+
+// Endpoints for individual table management
+router.get('/mine/tables', protect, authorize('restaurant'), getMyTables);
+router.patch('/mine/tables/:tableId', protect, authorize('restaurant'), updateMyTable);
 
 export default router;

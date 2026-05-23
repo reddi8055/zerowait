@@ -6,10 +6,17 @@ import { sendWhatsAppConfirmation } from './whatsapp.js';
 // Peak 7 PM – 9 PM → "15-20 mins waiting time"
 // All other times  → "0 mins - Table Ready"
 // ══════════════════════════════════════════════════════════════════
-export function calculateWaitingTime(bookingTime) {
+export function calculateWaitingTime(bookingTime, currentWaitTime = 0) {
   try {
+    let wait = Number(currentWaitTime) || 0;
     const hour = new Date(bookingTime).getHours();
-    if (hour >= 19 && hour < 21) return '15-20 mins waiting time';
+    
+    // Add base wait time during peak hours if it's currently low
+    if (hour >= 19 && hour < 21 && wait < 15) {
+      wait = 15;
+    }
+    
+    if (wait > 0) return `${wait} mins waiting time`;
   } catch { /* fall through */ }
   return '0 mins - Table Ready';
 }

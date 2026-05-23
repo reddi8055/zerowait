@@ -59,9 +59,15 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ error: 'One or more selected tables are no longer available.' });
     }
 
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found.' });
+    }
+    const restaurantName = restaurant.name || 'the restaurant';
+
     // ── Calculate dynamic wait time ───────────────────────────
     const effectiveBookingTime = bookingTime || new Date().toISOString();
-    const waitingTimeStatus    = calculateWaitingTime(effectiveBookingTime);
+    const waitingTimeStatus    = calculateWaitingTime(effectiveBookingTime, restaurant.currentWaitTime);
 
     // ── Save booking to DB ────────────────────────────────────
     const booking = await Booking.create({
@@ -85,12 +91,8 @@ export const createBooking = async (req, res) => {
     await Table.updateMany({ _id: { $in: tableIds } }, { $set: { isAvailable: false } });
 
     // ── Increment restaurant wait time by 10 min ──────────────
-    const restaurant     = await Restaurant.findById(restaurantId);
-    const restaurantName = restaurant?.name || 'the restaurant';
-    if (restaurant) {
-      restaurant.currentWaitTime = (restaurant.currentWaitTime || 0) + 10;
-      await restaurant.save();
-    }
+    restaurant.currentWaitTime = (restaurant.currentWaitTime || 0) + 10;
+    await restaurant.save();
 
     // ── Send notifications (non-blocking, isolated try-catch) ─
     const notifyPayload = {
