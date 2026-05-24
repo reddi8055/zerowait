@@ -361,15 +361,21 @@ export default function RestaurantDetails() {
                         <div
                           key={table._id}
                           className={`p-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2
-                            ${isTableSelected
-                              ? 'border-emerald-500 bg-emerald-50/20 shadow-md shadow-emerald-100'
-                              : 'border-gray-100 bg-white hover:border-emerald-300 hover:shadow-sm'}`}
+                            ${!table.isAvailable
+                              ? 'border-gray-200 bg-gray-50 opacity-75'
+                              : isTableSelected
+                                ? 'border-emerald-500 bg-emerald-50/20 shadow-md shadow-emerald-100'
+                                : 'border-gray-100 bg-white hover:border-emerald-300 hover:shadow-sm'}`}
                         >
                           {/* Table Top */}
                           <div className={`w-full py-2 rounded-xl border-[3px] flex items-center justify-center transition-all
-                            ${isTableSelected ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
+                            ${!table.isAvailable
+                              ? 'border-gray-300 bg-gray-200 text-gray-500 opacity-60'
+                              : isTableSelected 
+                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                                : 'border-gray-200 bg-gray-50 text-gray-400'}`}>
                             <span className="font-black text-xs uppercase tracking-widest flex items-center gap-1">
-                              <Utensils size={14} /> {table.tableName}
+                              <Utensils size={14} /> {table.tableName} {!table.isAvailable && '(Booked)'}
                             </span>
                           </div>
                           
@@ -382,14 +388,17 @@ export default function RestaurantDetails() {
                               return (
                                 <button 
                                   key={i} 
+                                  disabled={!table.isAvailable}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleSeatSelection(table._id, i);
                                   }}
-                                  className={`w-8 h-8 rounded border-[2px] flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
-                                    isSelected 
-                                      ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm scale-110' 
-                                      : 'border-emerald-500 bg-white text-gray-500 hover:bg-emerald-50 hover:scale-105'
+                                  className={`w-8 h-8 rounded border-[2px] flex items-center justify-center text-xs font-bold transition-all ${
+                                    !table.isAvailable
+                                      ? 'border-gray-400 bg-gray-300 text-gray-600 cursor-not-allowed opacity-60'
+                                      : isSelected 
+                                        ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm scale-110 cursor-pointer' 
+                                        : 'border-emerald-500 bg-white text-gray-500 hover:bg-emerald-50 hover:scale-105 cursor-pointer'
                                   }`} 
                                   title={`Seat ${i+1}`}
                                 >
